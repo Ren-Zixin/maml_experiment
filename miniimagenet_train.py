@@ -9,6 +9,9 @@ import  argparse
 
 from meta import Meta
 
+import time
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def mean_confidence_interval(accs, confidence=0.95):
     n = accs.shape[0]
@@ -55,12 +58,21 @@ def main():
     print('Total trainable tensors:', num)
 
     # batchsz here means total episode number
-    mini = MiniImagenet('/home/i/tmp/MAML-Pytorch/miniimagenet/', mode='train', n_way=args.n_way, k_shot=args.k_spt,
+    #/home/rzx/sourcecode/maml/maml0404/miniimagenet/
+    mini = MiniImagenet('/home/rzx/sourcecode/maml/maml0404/miniimagenet/', mode='train', n_way=args.n_way, k_shot=args.k_spt,
                         k_query=args.k_qry,
                         batchsz=10000, resize=args.imgsz)
-    mini_test = MiniImagenet('/home/i/tmp/MAML-Pytorch/miniimagenet/', mode='test', n_way=args.n_way, k_shot=args.k_spt,
+    mini_test = MiniImagenet('/home/rzx/sourcecode/maml/maml0404/miniimagenet/', mode='test', n_way=args.n_way, k_shot=args.k_spt,
                              k_query=args.k_qry,
                              batchsz=100, resize=args.imgsz)
+
+    filename = '/home/rzx/sourcecode/maml/maml0404/model/' + 'mini-imagenet_dtg_' + str(args.epoch) + '_' + str(
+        args.n_way) + '_' + str(args.k_spt) + '_' + str(args.k_qry)
+
+    loca = time.strftime('%Y-%m-%d %H:%M:%S')
+    # 将训练结果写入txt中
+    file_handle = open(filename + '.txt', mode='a+', encoding='UTF-8')
+    file_handle.write('training result for: ' + '/t' + str(filename) + str(loca) + '\n')
 
     for epoch in range(args.epoch//10000):
         # fetch meta_batchsz num of episode each time
@@ -90,17 +102,19 @@ def main():
                 accs = np.array(accs_all_test).mean(axis=0).astype(np.float16)
                 print('Test acc:', accs)
 
+    torch.save(maml, filename + '.pt')
+    file_handle.close()
 
 if __name__ == '__main__':
 
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--epoch', type=int, help='epoch number', default=60000)
+    argparser.add_argument('--epoch', type=int, help='epoch number', default=20000)
     argparser.add_argument('--n_way', type=int, help='n way', default=5)
-    argparser.add_argument('--k_spt', type=int, help='k shot for support set', default=1)
+    argparser.add_argument('--k_spt', type=int, help='k shot for support set', default=5)
     argparser.add_argument('--k_qry', type=int, help='k shot for query set', default=15)
     argparser.add_argument('--imgsz', type=int, help='imgsz', default=84)
     argparser.add_argument('--imgc', type=int, help='imgc', default=3)
-    argparser.add_argument('--task_num', type=int, help='meta batch size, namely task num', default=4)
+    argparser.add_argument('--task_num', type=int, help='meta batch size, namely task num', default=2)
     argparser.add_argument('--meta_lr', type=float, help='meta-level outer learning rate', default=1e-3)
     argparser.add_argument('--update_lr', type=float, help='task-level inner update learning rate', default=0.01)
     argparser.add_argument('--update_step', type=int, help='task-level inner update steps', default=5)
